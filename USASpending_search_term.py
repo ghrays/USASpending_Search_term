@@ -101,10 +101,10 @@ def download_awards(session, award_codes):
     # —– SHOW THE REQUEST ON SCREEN —–
     st.sidebar.markdown("### API Request")
     st.sidebar.write("**POST** " + DOWNLOAD_URL)
-    # st.sidebar.write("**Headers:**")
-    # st.sidebar.json(dict(session.headers))
-    # st.sidebar.write("**Payload:**")
-    # st.sidebar.json(payload)
+    st.sidebar.write("**Headers:**")
+    st.sidebar.json(dict(session.headers))
+    st.sidebar.write("**Payload:**")
+    st.sidebar.json(payload)
 
     msg = f"Submitting download job for award_type_codes={award_codes}"
     logger.info(msg)
@@ -117,7 +117,7 @@ def download_awards(session, award_codes):
     if not job_id:
         raise RuntimeError("Download API did not return a job ID")
 
-    # st.sidebar.write(f"Download job ID: {job_id}")
+    st.sidebar.write(f"Download job ID: {job_id}")
     logger.info(f"Download job ID: {job_id}")
 
     status_url = f"{STATUS_URL_BASE}?file_name={job_id}&type=awards"
@@ -156,7 +156,6 @@ def download_awards(session, award_codes):
                 with zf.open(name) as csvfile:
                     return pd.read_csv(csvfile, low_memory=False)
     return pd.DataFrame()
-
 
 # ------------------------------------------------------------------------------
 #  Cleaning & filtering (including client‑side keyword & date logic)
