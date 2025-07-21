@@ -31,7 +31,7 @@ def download_awards(session, award_codes):
         return pd.DataFrame()
 
     logger.info(f"Download job ID: {job_id}")
-    status_url = f"{STATUS_URL_BASE}?file_name={job_id}&type=awards"`
+    status_url = f"{STATUS_URL_BASE}?file_name={job_id}&type=awards"
     delay = 1
     status_placeholder = st.sidebar.empty()
 
