@@ -101,7 +101,7 @@ def download_awards(session, award_codes):
     # —– SHOW THE REQUEST ON SCREEN —–
     st.sidebar.markdown("### API Request")
     st.sidebar.write("**POST** " + DOWNLOAD_URL)
-   st.sidebar.write("**Headers:**")
+    st.sidebar.write("**Headers:**")
     st.sidebar.json(dict(session.headers))
     st.sidebar.write("**Payload:**")
     st.sidebar.json(payload)
