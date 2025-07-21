@@ -117,7 +117,7 @@ def download_awards(session, award_codes):
     if not job_id:
         raise RuntimeError("Download API did not return a job ID")
 
-    st.sidebar.write(f"Download job ID: {job_id}")
+#    st.sidebar.write(f"Download job ID: {job_id}")
     logger.info(f"Download job ID: {job_id}")
 
     status_url = f"{STATUS_URL_BASE}?file_name={job_id}&type=awards"
