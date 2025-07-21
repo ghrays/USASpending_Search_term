@@ -87,56 +87,46 @@ logger = setup_logging()
 today = datetime.today()
 
 # ------------------------------------------------------------------------------
-#  Download & status‑polling logic with full error visibility
+#  Download & status‑polling logic
 # ------------------------------------------------------------------------------
 def download_awards(session, award_codes):
     # build payload from our template
     payload = download_payload_template.copy()
     payload["filters"] = {
-        "keywords":          static_filters["keywords"],
-        "time_period":       static_filters["time_period"],
-        "award_type_codes":  award_codes
+        "keywords":       static_filters["keywords"],
+        "time_period":    static_filters["time_period"],
+        "award_type_codes": award_codes
     }
+
+    # —– SHOW THE REQUEST ON SCREEN —–
+    st.sidebar.markdown("### API Request")
+    st.sidebar.write("**POST** " + DOWNLOAD_URL)
+    st.sidebar.write("**Headers:**")
+    st.sidebar.json(dict(session.headers))
+    st.sidebar.write("**Payload:**")
+    st.sidebar.json(payload)
 
     msg = f"Submitting download job for award_type_codes={award_codes}"
     logger.info(msg)
     st.sidebar.info(msg)
 
-    # POST and inspect errors
-    try:
-        resp = session.post(DOWNLOAD_URL, json=payload)
-        resp.raise_for_status()
-    except requests.exceptions.HTTPError as e:
-        code = e.response.status_code
-        text = e.response.text
-        logger.error(f"POST {DOWNLOAD_URL} failed {code}: {text}")
-        st.sidebar.error(f"Error {code} fetching data: {text}")
-        return pd.DataFrame()
+    resp = session.post(DOWNLOAD_URL, json=payload)
+    resp.raise_for_status()
 
     job_id = resp.json().get('file_name')
     if not job_id:
-        err = resp.json()
-        logger.error(f"No job_id in response: {err}")
-        st.sidebar.error(f"Unexpected API response: {json.dumps(err)}")
-        return pd.DataFrame()
+        raise RuntimeError("Download API did not return a job ID")
 
+    st.sidebar.write(f"Download job ID: {job_id}")
     logger.info(f"Download job ID: {job_id}")
+
     status_url = f"{STATUS_URL_BASE}?file_name={job_id}&type=awards"
     delay = 1
     status_placeholder = st.sidebar.empty()
 
-    # Polling loop with error inspection
     while True:
-        try:
-            status_resp = session.get(status_url)
-            status_resp.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            code = e.response.status_code
-            text = e.response.text
-            logger.error(f"GET {status_url} failed {code}: {text}")
-            status_placeholder.error(f"Error checking job status {code}: {text}")
-            return pd.DataFrame()
-
+        status_resp = session.get(status_url)
+        status_resp.raise_for_status()
         status = status_resp.json().get('status')
         status_msg = f"Job {job_id} status: {status}"
         logger.info(status_msg)
@@ -145,36 +135,26 @@ def download_awards(session, award_codes):
         if status == 'finished':
             download_url = status_resp.json().get('url') or status_resp.json().get('file_url')
             if download_url:
-                status_placeholder.write("Download URL available, fetching data…")
-                logger.info("Download URL available, fetching data…")
+                status_placeholder.write("Download URL available, fetching data...")
+                logger.info("Download URL available, fetching data...")
                 break
         elif status == 'failed':
             error_msg = f"Download job {job_id} failed"
             logger.error(error_msg)
             status_placeholder.error(error_msg)
-            return pd.DataFrame()
+            raise RuntimeError(error_msg)
 
         time.sleep(delay)
-        status_placeholder.write(f"Waiting {delay}s before retry…")
+        status_placeholder.write(f"Waiting {delay}s before retry...")
         delay = min(delay * 2, 30)
 
-    # Fetch the ZIP and read CSV
-    try:
-        zip_resp = session.get(download_url)
-        zip_resp.raise_for_status()
-    except requests.exceptions.HTTPError as e:
-        code = e.response.status_code
-        text = e.response.text
-        logger.error(f"Error fetching ZIP {download_url} {code}: {text}")
-        st.sidebar.error(f"Error downloading file: {text}")
-        return pd.DataFrame()
-
+    zip_resp = session.get(download_url)
+    zip_resp.raise_for_status()
     with zipfile.ZipFile(BytesIO(zip_resp.content)) as zf:
         for name in zf.namelist():
             if name.lower().endswith('.csv'):
                 with zf.open(name) as csvfile:
                     return pd.read_csv(csvfile, low_memory=False)
-
     return pd.DataFrame()
 
 # ------------------------------------------------------------------------------
@@ -230,6 +210,37 @@ def clean_and_filter(df, keywords):
     return df
 
 # ------------------------------------------------------------------------------
+#  Push to Google Sheets
+# ------------------------------------------------------------------------------
+
+#def update_google_sheets(df):
+#    df_to_write = df.copy()
+#    for col in df_to_write.select_dtypes(include=['category']):
+#        df_to_write[col] = df_to_write[col].astype(str)
+#    df_to_write.replace('nan', '', inplace=True)
+
+#    gc = pygsheets.authorize(service_file=CONFIG["google_credentials"])
+#    ss = gc.open_by_key(CONFIG["source_sheet_id"])
+
+#    try:
+#        summary_ws = ss.worksheet_by_title("summary")
+#    except pygsheets.WorksheetNotFound:
+#        summary_ws = ss.add_worksheet("summary", index=0)
+#    summary_ws.update_value('A1', 'Last Updated')
+#    summary_ws.update_value('B1', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+#    try:
+#        results_ws = ss.worksheet_by_title("results")
+#        results_ws.clear()
+#    except pygsheets.WorksheetNotFound:
+#        results_ws = ss.add_worksheet("results", index=1)
+
+#    results_ws.set_dataframe(df_to_write, 'A1', nan='')
+#    msg = f"Google sheet updated with {len(df_to_write)} rows"
+#    logger.info(msg)
+#    st.sidebar.success(msg)
+
+# ------------------------------------------------------------------------------
 #  Streamlit UI
 # ------------------------------------------------------------------------------
 st.set_page_config(page_title="USAspending Awards Explorer", layout="wide")
@@ -272,3 +283,7 @@ if st.sidebar.button("Fetch Awards"):
         filtered_df = clean_and_filter(combined, keywords)
         status_main.success(f"Found {len(filtered_df)} records matching your criteria.")
         st.dataframe(filtered_df)
+
+#        if st.sidebar.button("Update Google Sheet"):
+#            status_main.text("Updating Google Sheet...")
+#            update_google_sheets(filtered_df)
