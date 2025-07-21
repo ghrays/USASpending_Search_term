@@ -93,9 +93,9 @@ def download_awards(session, award_codes):
     # build payload from our template
     payload = download_payload_template.copy()
     payload["filters"] = {
-        "keywords":       static_filters["keywords"],
-        "time_period":    static_filters["time_period"],
-        "award_type_codes": award_codes
+        "keywords":           static_filters["keywords"],
+        "time_period":        static_filters["time_period"],
+        "award_type_codes":   award_codes
     }
 
     # —– SHOW THE REQUEST ON SCREEN —–
@@ -110,8 +110,23 @@ def download_awards(session, award_codes):
     logger.info(msg)
     st.sidebar.info(msg)
 
-    resp = session.post(DOWNLOAD_URL, json=payload)
-    resp.raise_for_status()
+    # === POST with retries ===
+    max_retries = 5
+    backoff = 1
+    for attempt in range(1, max_retries + 1):
+        try:
+            resp = session.post(DOWNLOAD_URL, json=payload)
+            resp.raise_for_status()
+            break  # success!
+        except requests.exceptions.RequestException as e:
+            logger.error(f"POST attempt {attempt}/{max_retries} failed: {e}")
+            st.sidebar.error(f"Attempt {attempt} failed: {e}")
+            if attempt == max_retries:
+                # give up
+                raise
+            logger.info(f"Retrying POST in {backoff}s...")
+            time.sleep(backoff)
+            backoff = min(backoff * 2, 30)
 
     job_id = resp.json().get('file_name')
     if not job_id:
