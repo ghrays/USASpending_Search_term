@@ -9,7 +9,7 @@ from io import BytesIO
 from datetime import datetime
 from dateutil import parser as date_parser
 from pathlib import Path
-#import pygsheets
+import pygsheets
 import re
 import json
 
@@ -212,33 +212,32 @@ def clean_and_filter(df, keywords):
 # ------------------------------------------------------------------------------
 #  Push to Google Sheets
 # ------------------------------------------------------------------------------
+def update_google_sheets(df):
+    df_to_write = df.copy()
+    for col in df_to_write.select_dtypes(include=['category']):
+        df_to_write[col] = df_to_write[col].astype(str)
+    df_to_write.replace('nan', '', inplace=True)
 
-#def update_google_sheets(df):
-#    df_to_write = df.copy()
-#    for col in df_to_write.select_dtypes(include=['category']):
-#        df_to_write[col] = df_to_write[col].astype(str)
-#    df_to_write.replace('nan', '', inplace=True)
+    gc = pygsheets.authorize(service_file=CONFIG["google_credentials"])
+    ss = gc.open_by_key(CONFIG["source_sheet_id"])
 
-#    gc = pygsheets.authorize(service_file=CONFIG["google_credentials"])
-#    ss = gc.open_by_key(CONFIG["source_sheet_id"])
+    try:
+        summary_ws = ss.worksheet_by_title("summary")
+    except pygsheets.WorksheetNotFound:
+        summary_ws = ss.add_worksheet("summary", index=0)
+    summary_ws.update_value('A1', 'Last Updated')
+    summary_ws.update_value('B1', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
-#    try:
-#        summary_ws = ss.worksheet_by_title("summary")
-#    except pygsheets.WorksheetNotFound:
-#        summary_ws = ss.add_worksheet("summary", index=0)
-#    summary_ws.update_value('A1', 'Last Updated')
-#    summary_ws.update_value('B1', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    try:
+        results_ws = ss.worksheet_by_title("results")
+        results_ws.clear()
+    except pygsheets.WorksheetNotFound:
+        results_ws = ss.add_worksheet("results", index=1)
 
-#    try:
-#        results_ws = ss.worksheet_by_title("results")
-#        results_ws.clear()
-#    except pygsheets.WorksheetNotFound:
-#        results_ws = ss.add_worksheet("results", index=1)
-
-#    results_ws.set_dataframe(df_to_write, 'A1', nan='')
-#    msg = f"Google sheet updated with {len(df_to_write)} rows"
-#    logger.info(msg)
-#    st.sidebar.success(msg)
+    results_ws.set_dataframe(df_to_write, 'A1', nan='')
+    msg = f"Google sheet updated with {len(df_to_write)} rows"
+    logger.info(msg)
+    st.sidebar.success(msg)
 
 # ------------------------------------------------------------------------------
 #  Streamlit UI
