@@ -9,7 +9,7 @@ from io import BytesIO
 from datetime import datetime
 from dateutil import parser as date_parser
 from pathlib import Path
-import pygsheets
+#import pygsheets
 import re
 import json
 
@@ -212,6 +212,7 @@ def clean_and_filter(df, keywords):
 # ------------------------------------------------------------------------------
 #  Push to Google Sheets
 # ------------------------------------------------------------------------------
+'''
 def update_google_sheets(df):
     df_to_write = df.copy()
     for col in df_to_write.select_dtypes(include=['category']):
@@ -238,7 +239,7 @@ def update_google_sheets(df):
     msg = f"Google sheet updated with {len(df_to_write)} rows"
     logger.info(msg)
     st.sidebar.success(msg)
-
+'''
 # ------------------------------------------------------------------------------
 #  Streamlit UI
 # ------------------------------------------------------------------------------
