@@ -284,6 +284,6 @@ if st.sidebar.button("Fetch Awards"):
         status_main.success(f"Found {len(filtered_df)} records matching your criteria.")
         st.dataframe(filtered_df)
 
-#        if st.sidebar.button("Update Google Sheet"):
-#            status_main.text("Updating Google Sheet...")
-#            update_google_sheets(filtered_df)
+        if st.sidebar.button("Update Google Sheet"):
+            status_main.text("Updating Google Sheet...")
+            update_google_sheets(filtered_df)
