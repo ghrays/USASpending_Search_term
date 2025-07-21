@@ -87,15 +87,15 @@ logger = setup_logging()
 today = datetime.today()
 
 # ------------------------------------------------------------------------------
-#  Download & status‑polling logic
+#  Download & status‑polling logic with retries on POST
 # ------------------------------------------------------------------------------
 def download_awards(session, award_codes):
     # build payload from our template
     payload = download_payload_template.copy()
     payload["filters"] = {
-        "keywords":           static_filters["keywords"],
-        "time_period":        static_filters["time_period"],
-        "award_type_codes":   award_codes
+        "keywords":         static_filters["keywords"],
+        "time_period":      static_filters["time_period"],
+        "award_type_codes": award_codes
     }
 
     # —– SHOW THE REQUEST ON SCREEN —–
@@ -122,7 +122,7 @@ def download_awards(session, award_codes):
             logger.error(f"POST attempt {attempt}/{max_retries} failed: {e}")
             st.sidebar.error(f"Attempt {attempt} failed: {e}")
             if attempt == max_retries:
-                # give up
+                # out of retries: re‑raise
                 raise
             logger.info(f"Retrying POST in {backoff}s...")
             time.sleep(backoff)
