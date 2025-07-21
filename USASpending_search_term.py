@@ -9,7 +9,7 @@ from io import BytesIO
 from datetime import datetime
 from dateutil import parser as date_parser
 from pathlib import Path
-import pygsheets
+#import pygsheets
 import re
 import json
 
@@ -100,10 +100,10 @@ def download_awards(session, award_codes):
 
     # —– SHOW THE REQUEST ON SCREEN —–
     st.sidebar.markdown("### API Request")
-    st.sidebar.write("**POST** " + DOWNLOAD_URL)
-    st.sidebar.write("**Headers:**")
+  #  st.sidebar.write("**POST** " + DOWNLOAD_URL)
+  # st.sidebar.write("**Headers:**")
     st.sidebar.json(dict(session.headers))
-    st.sidebar.write("**Payload:**")
+  #  st.sidebar.write("**Payload:**")
     st.sidebar.json(payload)
 
     msg = f"Submitting download job for award_type_codes={award_codes}"
@@ -283,6 +283,6 @@ if st.sidebar.button("Fetch Awards"):
         status_main.success(f"Found {len(filtered_df)} records matching your criteria.")
         st.dataframe(filtered_df)
 
-        if st.sidebar.button("Update Google Sheet"):
-            status_main.text("Updating Google Sheet...")
-            update_google_sheets(filtered_df)
+#       if st.sidebar.button("Update Google Sheet"):
+#           status_main.text("Updating Google Sheet...")
+#            update_google_sheets(filtered_df)
